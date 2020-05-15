@@ -1,14 +1,9 @@
 
-# Text Classification Lab v2 - Finding Trump
-
-- online-ds-pt-100719
-- 05/15/20
-
-- This is a modified version of https://github.com/learn-co-students/dsc-text-classification-lab-online-ds-pt-100719
+# Text Classification - Lab
 
 ## Introduction
 
-In this lab, we'll use everything we've learned so far to build a model that can classify a text document as one of two possible classes. 
+In this lab, we'll use everything we've learned so far to build a model that can classify a text document as one of many possible classes!
 
 ## Objectives
 
@@ -21,21 +16,9 @@ You will be able to:
 
 # Getting Started
 
-~~For this lab, we'll be working with the classic **_Newsgroups Dataset_**, which is available as a training data set in `sklearn.datasets`. This dataset contains many different articles that fall into 1 of 20 possible classes. Our goal will be to build a classifier that can accurately predict the class of an article based on the features we create from the article itself!~~
-## Background - Finding Trump
-- In this follow-up lab you will be using the provided `finding-trump.csv` to create a text classification model to determine if a Trump came from Donald Trump or one of his staffers. 
+For this lab, we'll be working with the classic **_Newsgroups Dataset_**, which is available as a training data set in `sklearn.datasets`. This dataset contains many different articles that fall into 1 of 20 possible classes. Our goal will be to build a classifier that can accurately predict the class of an article based on the features we create from the article itself!
 
-> - During the early years of his presidency, Donald Trump refused to stop using his non-secure personal Android phone for his own use. 
-- White House communications typically require presidents use a secure iPhone. 
-- Consequently, for a period of time in his early presidency, Tweets from Donald Trump's twitter account were generally sent from 2 different devices:
-    - Twitter for iPhone
-    - Twitter for Android.
-    
-- During this time period (in which he was still using an Android), we can safely assume that:
-    - all Tweets sent from "Twitter for Android" are Trump and that
-    - all Tweets sent from the "Twitter for iPhone" are one of his staffers. 
-
-# Your Work 
+Let's get started. Run the cell below to import everything we'll need for this lab. 
 
 
 ```python
@@ -53,125 +36,56 @@ import numpy as np
 np.random.seed(0)
 ```
 
-## Creating the dataset
+Now, we need to fetch our dataset. Run the cell below to download all the newsgroups articles and their corresponding labels. If this is the first time working with this dataset, scikit-learn will need to download all of the articles from an external repository -- the cell below may take a little while to run. 
+
+The actual dataset is quite large. To save us from extremely long runtimes, we'll work with only a subset of the classes. Here is a list of all the possible classes:
+
+<img src='classes.png'>
+
+For this lab, we'll only work with the following five:
+
+* `'alt.atheism'`
+* `'comp.windows.x'`
+* `'rec.sport.hockey'`
+* `'sci.crypt'`
+* `'talk.politics.guns'`
+
+In the cell below:
+
+* Create a list called `categories` that contains the five newsgroups classes listed above, as strings 
+* Get the training set by calling `fetch_20newsgroups()` and passing in the following parameters:
+    * `subset='train'`
+    * `categories=categories`
+    * `remove=('headers', 'footers', 'quotes')` -- this is so that the model can't overfit to metadata included in the articles that sometimes acts as a dead-giveaway as to what class the article belongs to  
+* Get the testing set as well by passing in the same parameters, with the exception of `subset='test` 
 
 
 ```python
-## Load in the finding-trump.csv 
-df = pd.read_csv('finding-trump.csv')
-df.head()
+categories = None
+newsgroups_train = None
+newsgroups_test = None
 ```
 
+Great! Let's break apart the data and the labels, and then inspect the class names to see what the actual newsgroups are.
 
+In the cell below:
 
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>source</th>
-      <th>text</th>
-      <th>created_at</th>
-      <th>retweet_count</th>
-      <th>favorite_count</th>
-      <th>is_retweet</th>
-      <th>id_str</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>0</td>
-      <td>Twitter Media Studio</td>
-      <td>https://t.co/EVAEYD1AgV</td>
-      <td>01-01-2020 03:12:07</td>
-      <td>25016</td>
-      <td>108830</td>
-      <td>False</td>
-      <td>1212209862094012416</td>
-    </tr>
-    <tr>
-      <td>1</td>
-      <td>Twitter for iPhone</td>
-      <td>HAPPY NEW YEAR!</td>
-      <td>01-01-2020 01:30:35</td>
-      <td>85409</td>
-      <td>576045</td>
-      <td>False</td>
-      <td>1212184310389850119</td>
-    </tr>
-    <tr>
-      <td>2</td>
-      <td>Twitter for iPhone</td>
-      <td>Our fantastic First Lady! https://t.co/6iswto4WDI</td>
-      <td>01-01-2020 01:22:28</td>
-      <td>27567</td>
-      <td>132633</td>
-      <td>False</td>
-      <td>1212182267113680896</td>
-    </tr>
-    <tr>
-      <td>3</td>
-      <td>Twitter for iPhone</td>
-      <td>RT @DanScavino: https://t.co/CJRPySkF1Z</td>
-      <td>01-01-2020 01:18:47</td>
-      <td>10796</td>
-      <td>0</td>
-      <td>True</td>
-      <td>1212181341078458369</td>
-    </tr>
-    <tr>
-      <td>4</td>
-      <td>Twitter for iPhone</td>
-      <td>RT @SenJohnKennedy: I think Speaker Pelosi is ...</td>
-      <td>01-01-2020 01:17:43</td>
-      <td>8893</td>
-      <td>0</td>
-      <td>True</td>
-      <td>1212181071988703232</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-### Steps for Creating the Training and Test Data
-1. Create a date time index for the df from "created_at".
-2. Find the date & time for the first and last tweets where "source" = `Twitter for Android` 
-3. Limit the dataset to only Tweets that occurred between the first and last Twitter for Android tweets were sent.
-
-4. Next, remove any Tweets that were sent from any device other than "Twitter for Android" and "Twitter for iPhone".
-
-5. Create a new "target"/"trump" column where:
-    - 1 = the tweet source was Twitter for Android
-    - 0 = the tweet source was Twitter for iPhone
-    
-
-### Data for Modeling
-- The data for the classification will come from the `text` column.
-- The target will come from the "target"/"trump" column.
-
-- Once you vectorize the dataset, you will then use train-test-split to create X_train,X_test,y_train,y_test.
+* Grab the data from `newsgroups_train.data` and store it in the appropriate variable  
+* Grab the labels from `newsgroups_train.target` and store it in the appropriate variable  
+* Grab the label names from `newsgroups_train.target_names` and store it in the appropriate variable  
+* Display the `label_names` so that we can see the different classes of articles that we're working with, and confirm that we grabbed the right ones  
 
 
 ```python
 data = None
 target = None
+label_names = None
+label_names
 ```
+
+Finally, let's check the shape of `data` to see what our data looks like. We can do this by checking the `.shape` attribute of `newsgroups_train.filenames`.
+
+Do this now in the cell below.
 
 
 ```python
@@ -184,13 +98,6 @@ target = None
     (2814,)
 
 
-
-# NOTE: ALL FURTHER INSTRUCTIONS BELOW HAVE NOT BEEN UPDATED. 
-
-- Most of the steps can be done the same way as the original lab, but you are NOT required to use the same approaches as they describe below.
-
-
-# Original Lab Continued:
 
 Our dataset contains 2,814 different articles spread across the five classes we chose. 
 
@@ -235,7 +142,7 @@ In the cell below, complete the `process_article()` function. This function shou
 
 
 ```python
-def process_tweet(article):
+def process_article(article):
     pass  
 ```
 
